@@ -1,4 +1,4 @@
-# macOS Custom Hotkey Manager
+# macOS Hotkey Manager
 
 A Python script to **export**, **import**, and **reset** macOS application hotkeys using the `defaults` system.
 
