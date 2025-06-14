@@ -4,7 +4,7 @@ A Python script to **export**, **import**, and **reset** macOS application hotke
 
 ## 🎯 What is this tool for?
 
-To easily transfer your custom keyboard shortcuts across macOS systems or back them up for safety.
+To easily transfer your custom keyboard shortcuts across macOS machines or back them up for safety.
 
 ## ✨ Features
 
