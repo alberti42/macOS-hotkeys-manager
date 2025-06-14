@@ -96,7 +96,7 @@ This tool:
 # On your main machine
 ./hotkeys_manager.py --export my_hotkeys.json
 
-# Copy file to a second machine (e.g., via AirDrop or Git)
+# Copy file to a second machine (e.g., via AirDrop, scp, email, usb stick, Git, etc.)
 scp my_hotkeys.json user@newmac.local:~
 
 # On the second machine
