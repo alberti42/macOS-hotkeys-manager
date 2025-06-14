@@ -4,8 +4,6 @@ A Python script to **export**, **import**, and **reset** macOS application hotke
 
 > 🎯 Easily transfer your custom keyboard shortcuts across macOS systems or back them up for safety.
 
----
-
 ## ✨ Features
 
 - ✅ Export all user-defined hotkeys (menu item shortcuts) to a JSON file
