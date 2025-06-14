@@ -2,7 +2,7 @@
 
 A Python script to **export**, **import**, and **reset** macOS application hotkeys using the `defaults` system.
 
-**🎯 What is this tool for?**
+## 🎯 What is this tool for?
 
 To easily transfer your custom keyboard shortcuts across macOS systems or back them up for safety.
 
