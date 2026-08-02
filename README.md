@@ -12,7 +12,7 @@ This tool exports and imports exactly the shortcuts listed under **System Settin
 Keyboard → Keyboard Shortcuts… → App Shortcuts** — the per-app menu-item overrides, plus the
 **All Applications** group:
 
-![System Settings → Keyboard → Keyboard Shortcuts → App Shortcuts](screenshot.jpg)
+![System Settings → Keyboard → Keyboard Shortcuts → App Shortcuts](screenshot.png)
 
 It does **not** touch the other categories in that same list (Mission Control, Spotlight,
 Screenshots, Services, Function Keys, etc.); macOS stores those separately, in
