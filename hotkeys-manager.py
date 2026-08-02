@@ -64,15 +64,10 @@ def report_universalaccess_failure(stderr: str, missing_apps: List[str]) -> None
     if stderr:
         warn(f"   {stderr}")
     warn(
-        "\n   macOS protects this domain with TCC. `defaults write` succeeds only when the\n"
-        "   terminal running this script has been granted Full Disk Access.\n"
+        "\n   macOS protects this domain with TCC, which is what rejects the write.\n"
         "\n"
-        "   Preferred fix:\n"
-        "     System Settings → Privacy & Security → Full Disk Access → enable your\n"
-        "     terminal app, quit and reopen it, then run this import again.\n"
-        "\n"
-        "   Fallback, if you cannot grant Full Disk Access:\n"
-        "     System Settings → Keyboard → Keyboard Shortcuts… → App Shortcuts → +\n"
+        "   Register the apps through System Settings instead:\n"
+        "     Keyboard → Keyboard Shortcuts… → App Shortcuts → +\n"
         "     Add one shortcut for each app listed below; macOS registers the bundle ID\n"
         "     itself. Then run this import AGAIN — the App Shortcuts pane rewrites\n"
         f"     {KEY_EQUIVALENTS} wholesale and can drop entries written here."
