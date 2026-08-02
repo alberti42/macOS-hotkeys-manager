@@ -155,7 +155,12 @@ def refresh_preferences() -> None:
 
 
 def register_custom_apps(wanted: List[str]) -> int:
-    """Add bundle IDs to custommenu.apps. Returns the number of failures."""
+    """Add bundle IDs to custommenu.apps. Returns the number of failures.
+
+    macOS treats the array as a set, so the order carries no meaning. Store it sorted
+    and de-duplicated: the same set of apps then always produces the same array, which
+    keeps the plist diffable if you track it in a dotfiles repo.
+    """
     existing = list_custom_apps()
     new_apps = [app for app in wanted if app not in existing]
 
@@ -163,7 +168,7 @@ def register_custom_apps(wanted: List[str]) -> int:
         print(f"ℹ️  All {len(wanted)} app(s) already registered in {CUSTOM_MENU_KEY}.")
         return 0
 
-    ok, stderr = write_value(UNIVERSAL_ACCESS, CUSTOM_MENU_KEY, existing + sorted(new_apps))
+    ok, stderr = write_value(UNIVERSAL_ACCESS, CUSTOM_MENU_KEY, sorted(set(existing) | set(new_apps)))
 
     # Read back rather than trusting the exit code alone: this domain has a history of
     # rejecting writes without a useful status, which is what made the failure silent.
