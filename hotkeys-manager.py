@@ -59,12 +59,13 @@ def delete_value(domain: str, key: str) -> Tuple[bool, str]:
 
 
 def report_universalaccess_failure(stderr: str, missing_apps: List[str]) -> None:
-    """Explain a rejected write to the TCC-protected universalaccess domain."""
+    """Report a rejected write to the universalaccess domain and how to work around it."""
     warn(f"❌ Failed to update {UNIVERSAL_ACCESS} → {CUSTOM_MENU_KEY}")
     if stderr:
         warn(f"   {stderr}")
     warn(
-        "\n   macOS protects this domain with TCC, which is what rejects the write.\n"
+        "\n   The write was rejected, so the apps below were not registered and won't\n"
+        "   show up in System Settings → Keyboard → Keyboard Shortcuts → App Shortcuts.\n"
         "\n"
         "   Register the apps through System Settings instead:\n"
         "     Keyboard → Keyboard Shortcuts… → App Shortcuts → +\n"
@@ -152,9 +153,8 @@ def refresh_preferences() -> None:
 def register_custom_apps(wanted: List[str]) -> int:
     """Add bundle IDs to custommenu.apps. Returns the number of failures.
 
-    macOS treats the array as a set, so the order carries no meaning. Store it sorted
-    and de-duplicated: the same set of apps then always produces the same array, which
-    keeps the plist diffable if you track it in a dotfiles repo.
+    The array is stored sorted and de-duplicated so the same set of apps always produces
+    the same plist, which keeps it diffable if you track it in a dotfiles repo.
     """
     existing = list_custom_apps()
     new_apps = [app for app in wanted if app not in existing]
@@ -165,8 +165,8 @@ def register_custom_apps(wanted: List[str]) -> int:
 
     ok, stderr = write_value(UNIVERSAL_ACCESS, CUSTOM_MENU_KEY, sorted(set(existing) | set(new_apps)))
 
-    # Read back rather than trusting the exit code alone: this domain has a history of
-    # rejecting writes without a useful status, which is what made the failure silent.
+    # Confirm by reading the value back, not by trusting the exit status alone, so a write
+    # that is rejected or silently changes nothing is caught instead of reported as success.
     still_missing = [app for app in new_apps if app not in list_custom_apps()]
 
     if not ok or still_missing:
@@ -189,7 +189,7 @@ def import_shortcuts(filename: str, force: bool = False) -> int:
         print(f"ℹ️  Nothing to import: {filename} is empty.")
         return 0
 
-    # Register the bundle IDs first, so a TCC rejection is reported up front rather
+    # Register the bundle IDs first, so a rejected write is reported up front rather
     # than after the per-app writes have already gone through.
     failures = register_custom_apps(list(data.keys()))
 
