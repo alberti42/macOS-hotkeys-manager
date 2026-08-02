@@ -2,6 +2,7 @@
 
 import subprocess
 import argparse
+import getpass
 import json
 import plistlib
 import sys
@@ -125,11 +126,16 @@ def export_shortcuts(filename: str) -> int:
 
 
 def refresh_preferences() -> None:
-    try:
-        subprocess.run(["killall", "cfprefsd"], check=True)
+    # Scoped to this user: the root-owned cfprefsd cannot be signalled from here and
+    # would make an unscoped killall report a spurious failure.
+    result = subprocess.run(
+        ["killall", "-u", getpass.getuser(), "cfprefsd"],
+        capture_output=True, text=True
+    )
+    if result.returncode == 0:
         print("🔄 Reloaded macOS preference cache (cfprefsd)")
-    except subprocess.CalledProcessError:
-        print("⚠️ Could not reload cfprefsd (maybe it was already stopped?)")
+    else:
+        print("⚠️  Could not reload cfprefsd (maybe it was already stopped?)")
 
 
 def register_custom_apps(wanted: List[str]) -> int:
