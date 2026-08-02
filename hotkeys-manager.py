@@ -16,6 +16,11 @@ KEY_EQUIVALENTS = "NSUserKeyEquivalents"
 GLOBAL_DOMAIN = "NSGlobalDomain"
 TROUBLESHOOTING_URL = "https://github.com/alberti42/macOS-hotkeys-manager#-troubleshooting"
 
+# Exit codes
+EXIT_OK = 0        # everything applied
+EXIT_FAILURE = 1   # hotkeys could not be written (the shortcuts did not get applied)
+EXIT_PARTIAL = 2   # hotkeys written and working, but App Shortcuts registration was rejected
+
 
 def warn(message: str = "") -> None:
     """Print to stderr, flushing stdout first so interleaved output stays in order."""
@@ -193,9 +198,12 @@ def import_shortcuts(filename: str, force: bool = False) -> int:
         return 0
 
     # Register the bundle IDs first, so a rejected write is reported up front rather
-    # than after the per-app writes have already gone through.
-    failures = register_custom_apps(list(data.keys()))
+    # than after the per-app writes have already gone through. A rejected registration is
+    # not fatal: the per-app writes below still apply and the shortcuts still work; only
+    # their visibility in System Settings is lost.
+    registration_failed = register_custom_apps(list(data.keys())) > 0
 
+    app_failures = 0
     for app, keymap in data.items():
         merged = read_key_equivalents(app)
         updated = False
@@ -224,15 +232,30 @@ def import_shortcuts(filename: str, force: bool = False) -> int:
 
         if not ok or unwritten:
             report_app_failure(app, stderr)
-            failures += 1
+            app_failures += 1
         else:
             print(f"→ Updated hotkeys for {app}")
 
     refresh_preferences()
 
-    if failures:
-        warn(f"\n⚠️  Import finished with {failures} failure(s); see the messages above.")
-    return 1 if failures else 0
+    # A hotkey that could not be written is a hard failure and takes precedence: those
+    # shortcuts are not in effect. Report it and stop here.
+    if app_failures:
+        warn(f"\n❌ Import failed: {app_failures} app(s) could not be written; see above.")
+        return EXIT_FAILURE
+
+    # Otherwise the shortcuts are applied and working. A rejected registration only means
+    # the apps won't appear in System Settings — a partial success, not a failure.
+    if registration_failed:
+        warn(
+            "\n⚠️  Import partly succeeded: the hotkeys were written and are active, but the\n"
+            "   affected apps could not be registered in System Settings → Keyboard →\n"
+            "   Keyboard Shortcuts → App Shortcuts (see above). They work; they just won't\n"
+            "   show up there."
+        )
+        return EXIT_PARTIAL
+
+    return EXIT_OK
 
 
 def reset_shortcuts() -> int:
