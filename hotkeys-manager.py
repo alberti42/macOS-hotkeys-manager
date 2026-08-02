@@ -3,55 +3,55 @@
 import subprocess
 import argparse
 import json
+import plistlib
 import sys
 import os
-from typing import Dict, List, Optional
+from typing import Any, Dict, List
+
+UNIVERSAL_ACCESS = "com.apple.universalaccess"
+CUSTOM_MENU_KEY = "com.apple.custommenu.apps"
+KEY_EQUIVALENTS = "NSUserKeyEquivalents"
 
 
-def run_defaults_command(args: List[str]) -> Optional[str]:
+def read_domain(domain: str) -> Dict[str, Any]:
+    """Read a whole preference domain as a dict. Returns {} if missing or unreadable."""
     try:
-        output = subprocess.check_output(["defaults"] + args, stderr=subprocess.DEVNULL)
-        return output.decode("utf-8")
-    except subprocess.CalledProcessError:
-        return None
+        output = subprocess.run(
+            ["defaults", "export", domain, "-"],
+            capture_output=True, check=True
+        ).stdout
+        return plistlib.loads(output) or {}
+    except (subprocess.CalledProcessError, plistlib.InvalidFileException, ValueError):
+        return {}
+
+
+def write_value(domain: str, key: str, value: Any) -> None:
+    """Write one key as an XML plist, so quotes, backslashes and Unicode survive intact."""
+    subprocess.run(
+        ["defaults", "write", domain, key, plistlib.dumps(value).decode("utf-8")]
+    )
 
 
 def list_custom_apps() -> List[str]:
-    output = run_defaults_command(["read", "com.apple.universalaccess", "com.apple.custommenu.apps"])
-    if not output:
+    apps = read_domain(UNIVERSAL_ACCESS).get(CUSTOM_MENU_KEY, [])
+    if not isinstance(apps, list):
         return []
-    try:
-        cleaned = (
-            output.replace("(", "[").replace(")", "]")
-            .replace(";", ",").replace("=", ":")
-            .replace("NSGlobalDomain", '"NSGlobalDomain"')
-        )
-        return json.loads(cleaned)
-    except Exception:
-        return []
+    return [app for app in apps if isinstance(app, str)]
 
 
-def read_key_equivalents(domain: str) -> Optional[Dict[str, str]]:
-    output = run_defaults_command(["read", domain, "NSUserKeyEquivalents"])
-    if not output:
-        return None
-    try:
-        json_output = subprocess.check_output(
-            ["plutil", "-convert", "json", "-o", "-", "--", "-"],
-            input=output.encode("utf-8")
-        )
-        return json.loads(json_output)
-    except Exception:
-        return None
+def read_key_equivalents(domain: str) -> Dict[str, str]:
+    keymap = read_domain(domain).get(KEY_EQUIVALENTS)
+    if not isinstance(keymap, dict):
+        return {}
+    return {k: v for k, v in keymap.items() if isinstance(k, str) and isinstance(v, str)}
 
 
 def write_key_equivalents(domain: str, key_map: Dict[str, str]) -> None:
-    plist = "{" + "".join([f'"{k}" = "{v}"; ' for k, v in key_map.items()]) + "}"
-    subprocess.run(["defaults", "write", domain, "NSUserKeyEquivalents", plist])
+    write_value(domain, KEY_EQUIVALENTS, key_map)
 
 
 def delete_key_equivalents(domain: str) -> None:
-    subprocess.run(["defaults", "delete", domain, "NSUserKeyEquivalents"], stderr=subprocess.DEVNULL)
+    subprocess.run(["defaults", "delete", domain, KEY_EQUIVALENTS], stderr=subprocess.DEVNULL)
 
 
 def export_shortcuts(filename: str) -> None:
@@ -64,7 +64,7 @@ def export_shortcuts(filename: str) -> None:
             exported[app] = keymap
 
     with open(filename, "w") as f:
-        json.dump(exported, f, indent=2)
+        json.dump(exported, f, indent=2, ensure_ascii=False)
     print(f"✅ Exported hotkeys to {filename}")
 
 
@@ -89,7 +89,7 @@ def import_shortcuts(filename: str, force: bool = False) -> None:
 
     # Import shortcuts
     for app, keymap in data.items():
-        existing_keymap = read_key_equivalents(app) or {}
+        existing_keymap = read_key_equivalents(app)
         updated = False
 
         for menu_name, new_key in keymap.items():
@@ -115,11 +115,7 @@ def import_shortcuts(filename: str, force: bool = False) -> None:
     new_apps = all_apps - existing_apps
     updated_app_list = list(existing_apps.union(new_apps))
 
-    apps_list_str = "(" + ", ".join(f'"{app}"' for app in updated_app_list) + ")"
-    subprocess.run([
-        "defaults", "write", "com.apple.universalaccess",
-        "com.apple.custommenu.apps", apps_list_str
-    ])
+    write_value(UNIVERSAL_ACCESS, CUSTOM_MENU_KEY, updated_app_list)
     print(f"✅ Updated custommenu.apps with {len(new_apps)} new entries.")
     refresh_preferences()
 
@@ -143,7 +139,7 @@ def reset_shortcuts() -> None:
         print(f"🗑 Removed hotkeys for {app}")
 
     subprocess.run([
-        "defaults", "delete", "com.apple.universalaccess", "com.apple.custommenu.apps"
+        "defaults", "delete", UNIVERSAL_ACCESS, CUSTOM_MENU_KEY
     ], stderr=subprocess.DEVNULL)
     print("✅ Reset complete. All custom hotkeys and tracking removed.")
     refresh_preferences()
