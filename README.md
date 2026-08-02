@@ -91,6 +91,38 @@ This tool:
 
 ---
 
+## 🧯 Troubleshooting
+
+### `Could not write domain com.apple.universalaccess; exiting`
+
+Some users have reported that writing to `com.apple.universalaccess` — the domain that
+registers apps in **System Settings → Keyboard → Keyboard Shortcuts… → App Shortcuts** — is
+rejected with this message, apparently due to a TCC sandbox restriction on that domain (see
+[#3](https://github.com/alberti42/macOS-hotkeys-manager/issues/3)). When it happens,
+`--import` reports it, lists the affected apps, and exits non-zero. The per-app
+`NSUserKeyEquivalents` writes still succeed, but the affected apps won't show up in the App
+Shortcuts list until their bundle IDs are registered.
+
+Two workarounds appear to help:
+
+1. **Register the apps through the GUI.** Open **System Settings → Keyboard → Keyboard
+   Shortcuts… → App Shortcuts → +** and add **one** shortcut for each affected app; macOS
+   registers the bundle ID for you. Then run `--import` **again** — the App Shortcuts pane
+   rewrites `NSUserKeyEquivalents` wholesale and can drop entries the import already wrote,
+   so re-running restores them.
+
+2. **Disable SIP.** With System Integrity Protection turned off, `--import` writes
+   `com.apple.universalaccess` without any rejection (observed on macOS 26.5.2). Disabling
+   SIP lowers your system's security, so this is **not recommended** unless you make it a
+   conscious decision — or disable it just for the one-off import and re-enable it
+   immediately afterward.
+
+If you hit this rejection, please report your macOS version and whether either workaround
+helped on [#3](https://github.com/alberti42/macOS-hotkeys-manager/issues/3) — the exact
+conditions under which the write is allowed are not yet established.
+
+---
+
 ## 📦 Requirements
 
 - macOS 10.10 or newer
