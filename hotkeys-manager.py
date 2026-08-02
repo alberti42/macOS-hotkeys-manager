@@ -120,7 +120,8 @@ def export_shortcuts(filename: str) -> int:
             exported[app] = keymap
 
     with open(filename, "w") as f:
-        json.dump(exported, f, indent=2, ensure_ascii=False)
+        json.dump(exported, f, indent=2, sort_keys=True, ensure_ascii=False)
+        f.write("\n")
     print(f"✅ Exported hotkeys for {len(exported)} app(s) to {filename}")
     return 0
 
@@ -140,22 +141,21 @@ def refresh_preferences() -> None:
 
 def register_custom_apps(wanted: List[str]) -> int:
     """Add bundle IDs to custommenu.apps. Returns the number of failures."""
-    existing = set(list_custom_apps())
-    new_apps = set(wanted) - existing
+    existing = list_custom_apps()
+    new_apps = [app for app in wanted if app not in existing]
 
     if not new_apps:
         print(f"ℹ️  All {len(wanted)} app(s) already registered in {CUSTOM_MENU_KEY}.")
         return 0
 
-    ok, stderr = write_value(UNIVERSAL_ACCESS, CUSTOM_MENU_KEY, list(existing | new_apps))
+    ok, stderr = write_value(UNIVERSAL_ACCESS, CUSTOM_MENU_KEY, existing + sorted(new_apps))
 
     # Read back rather than trusting the exit code alone: this domain has a history of
     # rejecting writes without a useful status, which is what made the failure silent.
-    registered = set(list_custom_apps())
-    still_missing = sorted(app for app in new_apps if app not in registered)
+    still_missing = [app for app in new_apps if app not in list_custom_apps()]
 
     if not ok or still_missing:
-        report_universalaccess_failure(stderr, still_missing or sorted(new_apps))
+        report_universalaccess_failure(stderr, still_missing or new_apps)
         return 1
 
     print(f"✅ Registered {len(new_apps)} new app(s) in {CUSTOM_MENU_KEY}.")
