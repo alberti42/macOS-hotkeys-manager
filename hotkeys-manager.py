@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Tuple
 UNIVERSAL_ACCESS = "com.apple.universalaccess"
 CUSTOM_MENU_KEY = "com.apple.custommenu.apps"
 KEY_EQUIVALENTS = "NSUserKeyEquivalents"
+# System Settings calls this one "All Applications".
+GLOBAL_DOMAIN = "NSGlobalDomain"
 
 
 def warn(message: str = "") -> None:
@@ -102,6 +104,19 @@ def read_key_equivalents(domain: str) -> Dict[str, str]:
     return {k: v for k, v in keymap.items() if isinstance(k, str) and isinstance(v, str)}
 
 
+def domains_with_shortcuts() -> List[str]:
+    """Registered apps, plus "All Applications" when it holds shortcuts unregistered.
+
+    System Settings adds NSGlobalDomain to custommenu.apps when you create an All
+    Applications shortcut, but a shortcut set directly with `defaults write -g` never
+    gets registered, so scanning custommenu.apps alone would miss it.
+    """
+    apps = list_custom_apps()
+    if GLOBAL_DOMAIN not in apps and read_key_equivalents(GLOBAL_DOMAIN):
+        apps.append(GLOBAL_DOMAIN)
+    return apps
+
+
 def write_key_equivalents(domain: str, key_map: Dict[str, str]) -> Tuple[bool, str]:
     return write_value(domain, KEY_EQUIVALENTS, key_map)
 
@@ -111,7 +126,7 @@ def delete_key_equivalents(domain: str) -> Tuple[bool, str]:
 
 
 def export_shortcuts(filename: str) -> int:
-    apps = list_custom_apps()
+    apps = domains_with_shortcuts()
     exported: Dict[str, Dict[str, str]] = {}
 
     for app in apps:
@@ -218,7 +233,7 @@ def import_shortcuts(filename: str, force: bool = False) -> int:
 
 
 def reset_shortcuts() -> int:
-    apps = list_custom_apps()
+    apps = domains_with_shortcuts()
     if not apps:
         print("ℹ️  No custom hotkeys found to reset.")
         return 0

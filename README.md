@@ -90,6 +90,11 @@ macOS stores custom menu shortcuts in `NSUserKeyEquivalents` dictionaries in `de
 com.apple.universalaccess → com.apple.custommenu.apps
 ```
 
+The **All Applications** entry in that pane is not a real app — it is the `NSGlobalDomain`
+pseudo-domain, and it is exported and imported like any other. It is picked up even when it
+is missing from `com.apple.custommenu.apps`, which happens when a global shortcut was set
+directly with `defaults write -g NSUserKeyEquivalents …` rather than through System Settings.
+
 This tool:
 - Reads from those domains via `defaults export`, parsed as a real property list
 - Outputs valid JSON
