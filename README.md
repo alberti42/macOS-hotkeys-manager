@@ -117,9 +117,16 @@ Two workarounds appear to help:
    conscious decision — or disable it just for the one-off import and re-enable it
    immediately afterward.
 
-If you hit this rejection, please report your macOS version and whether either workaround
-helped on [#3](https://github.com/alberti42/macOS-hotkeys-manager/issues/3) — the exact
-conditions under which the write is allowed are not yet established.
+You can check your current SIP status with:
+
+```bash
+csrutil status
+```
+
+If you hit this rejection, please report your macOS version, whether SIP is enabled or
+disabled (see above), and whether either workaround helped on
+[#3](https://github.com/alberti42/macOS-hotkeys-manager/issues/3) — the exact conditions
+under which the write is allowed are not yet established.
 
 ---
 
