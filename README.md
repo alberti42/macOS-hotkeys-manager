@@ -6,6 +6,19 @@ A Python script to **export**, **import**, and **reset** macOS application hotke
 
 To easily transfer your custom keyboard shortcuts across macOS machines or back them up for safety.
 
+## 📌 What it covers
+
+This tool exports and imports exactly the shortcuts listed under **System Settings →
+Keyboard → Keyboard Shortcuts… → App Shortcuts** — the per-app menu-item overrides, plus the
+**All Applications** group:
+
+![System Settings → Keyboard → Keyboard Shortcuts → App Shortcuts](screenshot.jpg)
+
+It does **not** touch the other categories in that same list (Mission Control, Spotlight,
+Screenshots, Services, Function Keys, etc.); macOS stores those separately, in
+`com.apple.symbolichotkeys`. So if you have only customized shortcuts from those other
+categories, `--export` will correctly produce an empty file.
+
 ## ✨ Features
 
 - ✅ Export all user-defined hotkeys (menu item shortcuts) to a JSON file
