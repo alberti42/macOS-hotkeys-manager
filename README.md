@@ -63,13 +63,13 @@ To forcefully overwrite all conflicting entries:
 ./hotkeys-manager.py --import my_hotkeys.json --force
 ```
 
-`--import` reports its outcome through the exit code:
+`--import` (and `--reset`) report their outcome through the exit code:
 
-| Code | Meaning |
-|------|---------|
-| `0`  | All hotkeys were written and the apps were registered in System Settings. |
-| `2`  | The hotkeys were written and **are active**, but registering the apps in **App Shortcuts** was rejected — they work, they just won't show up there (see [Troubleshooting](#-troubleshooting)). |
-| `1`  | One or more hotkeys could **not** be written; those shortcuts are not in effect. |
+| Code | `--import` | `--reset` |
+|------|------------|-----------|
+| `0`  | All hotkeys written and the apps registered in System Settings. | All hotkeys removed and the App Shortcuts list cleared. |
+| `2`  | Hotkeys written and **active**, but registering the apps in **App Shortcuts** was rejected — they work, they just won't show up there (see [Troubleshooting](#-troubleshooting)). | Hotkeys removed, but the **App Shortcuts** list couldn't be cleared, so those apps may still appear there. |
+| `1`  | One or more hotkeys could **not** be written; those shortcuts are not in effect. | One or more hotkeys could **not** be removed; those shortcuts are still active. |
 
 ---
 

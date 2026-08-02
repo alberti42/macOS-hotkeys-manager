@@ -272,26 +272,41 @@ def reset_shortcuts() -> int:
         print("❌ Reset cancelled.")
         return 0
 
-    failures = 0
+    app_failures = 0
     for app in apps:
         ok, stderr = delete_key_equivalents(app)
         if ok:
             print(f"🗑 Removed hotkeys for {app}")
         else:
             report_app_failure(app, stderr)
-            failures += 1
+            app_failures += 1
 
     ok, stderr = delete_value(UNIVERSAL_ACCESS, CUSTOM_MENU_KEY)
-    if not ok or list_custom_apps():
-        report_universalaccess_failure(stderr, list_custom_apps())
-        failures += 1
+    registration_cleanup_failed = not ok or bool(list_custom_apps())
+    if registration_cleanup_failed:
+        warn(f"⚠️  Could not clear {UNIVERSAL_ACCESS} → {CUSTOM_MENU_KEY}")
+        if stderr:
+            warn(f"   {stderr}")
 
-    if failures:
-        warn(f"\n⚠️  Reset finished with {failures} failure(s); see the messages above.")
-    else:
-        print("✅ Reset complete. All custom hotkeys and tracking removed.")
     refresh_preferences()
-    return 1 if failures else 0
+
+    # A hotkey that could not be deleted is a hard failure: the shortcut is still active.
+    if app_failures:
+        warn(f"\n❌ Reset failed: {app_failures} app(s) could not be cleared; see above.")
+        return EXIT_FAILURE
+
+    # The hotkeys are gone; only the System Settings tracker could not be cleared, so the
+    # apps may still be listed under App Shortcuts. That is a partial success, not a failure.
+    if registration_cleanup_failed:
+        warn(
+            "\n⚠️  Reset partly succeeded: the hotkeys were removed, but the App Shortcuts\n"
+            "   list in System Settings could not be cleared (see above), so those apps may\n"
+            "   still appear there."
+        )
+        return EXIT_PARTIAL
+
+    print("✅ Reset complete. All custom hotkeys and tracking removed.")
+    return EXIT_OK
 
 
 def main() -> None:
