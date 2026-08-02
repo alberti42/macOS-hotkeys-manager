@@ -14,6 +14,7 @@ CUSTOM_MENU_KEY = "com.apple.custommenu.apps"
 KEY_EQUIVALENTS = "NSUserKeyEquivalents"
 # System Settings calls this one "All Applications".
 GLOBAL_DOMAIN = "NSGlobalDomain"
+TROUBLESHOOTING_URL = "https://github.com/alberti42/macOS-hotkeys-manager#-troubleshooting"
 
 
 def warn(message: str = "") -> None:
@@ -59,22 +60,24 @@ def delete_value(domain: str, key: str) -> Tuple[bool, str]:
 
 
 def report_universalaccess_failure(stderr: str, missing_apps: List[str]) -> None:
-    """Report a rejected write to the universalaccess domain and how to work around it."""
-    warn(f"❌ Failed to update {UNIVERSAL_ACCESS} → {CUSTOM_MENU_KEY}")
+    """Report a rejected write to the universalaccess domain, pointing at the docs."""
+    warn(f"⚠️  Could not update {UNIVERSAL_ACCESS} → {CUSTOM_MENU_KEY}")
     if stderr:
         warn(f"   {stderr}")
     warn(
-        "\n   The write was rejected, so the apps below were not registered and won't\n"
-        "   show up in System Settings → Keyboard → Keyboard Shortcuts → App Shortcuts.\n"
+        "\n   The apps below were not registered, so they won't appear under\n"
+        "   System Settings → Keyboard → Keyboard Shortcuts → App Shortcuts.\n"
         "\n"
-        "   Register the apps through System Settings instead:\n"
-        "     Keyboard → Keyboard Shortcuts… → App Shortcuts → +\n"
-        "     Add one shortcut for each app listed below; macOS registers the bundle ID\n"
-        "     itself. Then run this import AGAIN — the App Shortcuts pane rewrites\n"
-        f"     {KEY_EQUIVALENTS} wholesale and can drop entries written here."
+        "   This write is reported to be blocked on some systems — possibly a sandbox\n"
+        "   restriction on this domain; on machines with SIP disabled it goes through.\n"
+        "   Two workarounds tend to help:\n"
+        "     • Add one shortcut per affected app by hand via App Shortcuts → +, then\n"
+        "       re-run this import.\n"
+        "     • Disable SIP (a security tradeoff — not generally recommended).\n"
+        f"   Details: {TROUBLESHOOTING_URL}"
     )
     if missing_apps:
-        warn(f"\n   Still missing from {CUSTOM_MENU_KEY}:")
+        warn(f"\n   Apps still missing from {CUSTOM_MENU_KEY}:")
         for app in missing_apps:
             warn(f"     - {app}")
     warn()
