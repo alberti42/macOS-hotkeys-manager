@@ -15,8 +15,9 @@ CUSTOM_MENU_KEY = "com.apple.custommenu.apps"
 KEY_EQUIVALENTS = "NSUserKeyEquivalents"
 # System Settings calls this one "All Applications".
 GLOBAL_DOMAIN = "NSGlobalDomain"
-# A shortcut on a nested menu item stores its path with ESC before every component:
-# typing "Format->Font->Show Fonts" in System Settings is stored as
+# A shortcut can be addressed by a menu path instead of a bare item title, which resolves
+# ambiguity when two menus share a title. Such a path is stored with ESC before every
+# component: typing "Format->Font->Show Fonts" in System Settings is stored as
 # "\x1bFormat\x1bFont\x1bShow Fonts". The arrow never reaches the plist.
 MENU_PATH_SEPARATOR = "\x1b"
 TROUBLESHOOTING_URL = "https://github.com/alberti42/macOS-hotkeys-manager#-troubleshooting"
@@ -62,7 +63,7 @@ def read_domain(domain: str) -> Dict[str, Any]:
     """Read a whole preference domain as a dict. Returns {} if missing or unreadable.
 
     The export goes to a file, not to stdout: `defaults` writes XML to stdout but a binary
-    plist to a file. That matters because any shortcut on a nested menu item stores ESC
+    plist to a file. That matters because a shortcut addressed by a menu path stores ESC
     separators (see MENU_PATH_SEPARATOR), and `defaults` emits control characters into its
     XML unescaped. The result is malformed XML that Python refuses to parse. A binary plist
     has no such restriction.

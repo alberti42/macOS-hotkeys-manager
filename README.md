@@ -26,7 +26,7 @@ categories, `--export` will correctly produce an empty file.
 - ✅ Intelligent conflict detection (with `--force` overwrite option)
 - ✅ Full reset of all configured hotkeys (with user confirmation)
 - ✅ Automatically refreshes `cfprefsd` to apply changes immediately
-- ✅ Handles shortcuts on submenu items, whose menu paths contain control characters
+- ✅ Handles menu-path shortcuts, which macOS stores using control characters
 - ✅ Clean, type-annotated Python code
 
 ---
@@ -115,16 +115,17 @@ This tool:
 
 ### Submenu shortcuts
 
-A shortcut on a top-level menu item needs only that item's title. To reach an item inside a
-**submenu**, type the whole path with `->`. For example, **Keynote** has `Show Fonts` inside
-`Format` → `Font`, so you enter it as:
+A menu item is normally addressed by its own title, even when it sits inside a submenu.
+To resolve ambiguities with other menu entries holding the same title, provide the full
+title chain, separating the components with the literal `->`. For example, **Keynote**
+has `Show Fonts` inside `Format` → `Font`, so its title chain is:
 
 ```
 Format->Font->Show Fonts
 ```
 
-macOS does not store that arrow. It stores an **ESC** character (`0x1b`) in front of every
-component, so the stored key becomes:
+When the path form is used, macOS does not store that arrow. It stores an **ESC** character
+(`0x1b`) in front of every component, so the stored key becomes:
 
 ```
 \x1bFormat\x1bFont\x1bShow Fonts
