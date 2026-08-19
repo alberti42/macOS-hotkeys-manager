@@ -7,6 +7,7 @@ import json
 import plistlib
 import sys
 import os
+import tempfile
 from typing import Any, Dict, List, Tuple
 
 UNIVERSAL_ACCESS = "com.apple.universalaccess"
@@ -29,15 +30,25 @@ def warn(message: str = "") -> None:
 
 
 def read_domain(domain: str) -> Dict[str, Any]:
-    """Read a whole preference domain as a dict. Returns {} if missing or unreadable."""
-    try:
-        output = subprocess.run(
-            ["defaults", "export", domain, "-"],
-            capture_output=True, check=True
-        ).stdout
-        return plistlib.loads(output) or {}
-    except (subprocess.CalledProcessError, plistlib.InvalidFileException, ValueError):
-        return {}
+    """Read a whole preference domain as a dict. Returns {} if missing or unreadable.
+
+    The export goes to a file, not to stdout: `defaults` writes XML to stdout but a binary
+    plist to a file. That matters because a shortcut bound to Escape holds a raw 0x1b, and
+    `defaults` emits control characters into its XML unescaped, which makes the XML
+    malformed and Python refuses to parse it. A binary plist has no such restriction.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = os.path.join(tmpdir, "domain.plist")
+        try:
+            subprocess.run(
+                ["defaults", "export", domain, path],
+                capture_output=True, check=True
+            )
+            with open(path, "rb") as f:
+                return plistlib.load(f) or {}
+        except (subprocess.CalledProcessError, OSError,
+                plistlib.InvalidFileException, ValueError):
+            return {}
 
 
 def write_value(domain: str, key: str, value: Any) -> Tuple[bool, str]:
