@@ -116,9 +116,8 @@ This tool:
 ### Submenu shortcuts
 
 A shortcut on a top-level menu item needs only that item's title. To reach an item inside a
-**submenu**, type the whole path with `->`. For example, Keynote has `Show Fonts` inside
-`Format` → `Font`, so in System Settings → Keyboard → Keyboard Shortcuts → App Shortcuts you
-enter it as:
+**submenu**, type the whole path with `->`. For example, **Keynote** has `Show Fonts` inside
+`Format` → `Font`, so you enter it as:
 
 ```
 Format->Font->Show Fonts
