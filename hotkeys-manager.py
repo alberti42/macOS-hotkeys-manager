@@ -8,6 +8,7 @@ import plistlib
 import sys
 import os
 from typing import Any, Dict, List, Tuple
+from xml.parsers.expat import ExpatError
 
 UNIVERSAL_ACCESS = "com.apple.universalaccess"
 CUSTOM_MENU_KEY = "com.apple.custommenu.apps"
@@ -36,8 +37,42 @@ def read_domain(domain: str) -> Dict[str, Any]:
             capture_output=True, check=True
         ).stdout
         return plistlib.loads(output) or {}
-    except (subprocess.CalledProcessError, plistlib.InvalidFileException, ValueError):
+    except (subprocess.CalledProcessError, plistlib.InvalidFileException, ValueError, ExpatError):
         return {}
+
+
+def preference_plist_path(domain: str) -> str:
+    """Return the user preference plist path for a defaults domain."""
+    filename = ".GlobalPreferences.plist" if domain == GLOBAL_DOMAIN else f"{domain}.plist"
+    return os.path.expanduser(os.path.join("~/Library/Preferences", filename))
+
+
+def plutil_keypath(key: str) -> str:
+    """Escape dots for plutil key paths, where dots otherwise mean nesting."""
+    return key.replace("\\", "\\\\").replace(".", "\\.")
+
+
+def read_preference_key(domain: str, key: str) -> Any:
+    """Read a single preference key without serializing unrelated values.
+
+    `defaults export` produces XML, but custom menu shortcuts can contain raw control
+    characters such as ESC in nested menu paths. Those characters are not legal XML.
+    Extracting the key as a binary plist preserves the value without XML escaping issues.
+    """
+    plist_path = preference_plist_path(domain)
+    if os.path.exists(plist_path):
+        try:
+            output = subprocess.run(
+                ["plutil", "-extract", plutil_keypath(key), "binary1", "-o", "-", plist_path],
+                capture_output=True, check=True
+            ).stdout
+            if not output:
+                return None
+            return plistlib.loads(output)
+        except (subprocess.CalledProcessError, plistlib.InvalidFileException, ValueError):
+            pass
+
+    return read_domain(domain).get(key)
 
 
 def write_value(domain: str, key: str, value: Any) -> Tuple[bool, str]:
@@ -95,14 +130,14 @@ def report_app_failure(app: str, stderr: str) -> None:
 
 
 def list_custom_apps() -> List[str]:
-    apps = read_domain(UNIVERSAL_ACCESS).get(CUSTOM_MENU_KEY, [])
+    apps = read_preference_key(UNIVERSAL_ACCESS, CUSTOM_MENU_KEY)
     if not isinstance(apps, list):
         return []
     return [app for app in apps if isinstance(app, str)]
 
 
 def read_key_equivalents(domain: str) -> Dict[str, str]:
-    keymap = read_domain(domain).get(KEY_EQUIVALENTS)
+    keymap = read_preference_key(domain, KEY_EQUIVALENTS)
     if not isinstance(keymap, dict):
         return {}
     return {k: v for k, v in keymap.items() if isinstance(k, str) and isinstance(v, str)}
