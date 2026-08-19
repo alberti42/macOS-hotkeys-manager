@@ -51,15 +51,75 @@ def read_domain(domain: str) -> Dict[str, Any]:
             return {}
 
 
-def write_value(domain: str, key: str, value: Any) -> Tuple[bool, str]:
-    """Write one key as an XML plist, so quotes, backslashes and Unicode survive intact."""
+def defaults_escape_string(value: str) -> str:
+    """Quote a string for the old-style property list syntax parsed by defaults."""
+    escaped = []
+    for char in value:
+        codepoint = ord(char)
+        if char == "\\":
+            escaped.append("\\\\")
+        elif char == '"':
+            escaped.append('\\"')
+        elif char == "\x1b":
+            escaped.append("\\033")
+        elif codepoint < 0x20 or 0x7F <= codepoint <= 0x9F:
+            escaped.append(f"\\U{codepoint:04x}")
+        else:
+            escaped.append(char)
+    return f'"{"".join(escaped)}"'
+
+
+def defaults_literal(value: Any) -> str:
+    """Serialize a small plist value for `defaults write` old-style syntax."""
+    if isinstance(value, str):
+        return defaults_escape_string(value)
+    if isinstance(value, bool):
+        return "1" if value else "0"
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, dict):
+        if not value:
+            return "{ }"
+        non_string_keys = [k for k in value if not isinstance(k, str)]
+        if non_string_keys:
+            raise TypeError(
+                "defaults_literal only supports dicts with string keys; "
+                f"found non-string keys: {', '.join(map(repr, non_string_keys))}"
+            )
+        items = [
+            f"{defaults_escape_string(k)} = {defaults_literal(v)}"
+            for k, v in value.items()
+        ]
+        return "{ " + "; ".join(items) + "; }"
+    if isinstance(value, list):
+        return "( " + ", ".join(defaults_literal(item) for item in value) + " )"
+    raise TypeError(f"Unsupported defaults value: {type(value).__name__}")
+
+
+def run_defaults_write(domain: str, key: str, value: str) -> Tuple[bool, str]:
     result = subprocess.run(
-        ["defaults", "write", domain, key, plistlib.dumps(value).decode("utf-8")],
+        ["defaults", "write", domain, key, value],
         capture_output=True, text=True
     )
     stderr = result.stderr.strip()
     ok = result.returncode == 0 and "Could not write domain" not in stderr
     return ok, stderr
+
+
+def serialize_for_defaults(value: Any) -> str:
+    try:
+        return plistlib.dumps(value).decode("utf-8")
+    except (TypeError, ValueError):
+        return defaults_literal(value)
+
+
+def write_value(domain: str, key: str, value: Any) -> Tuple[bool, str]:
+    """Write one key, preserving quotes, backslashes, Unicode, and menu-path controls."""
+    try:
+        serialized_value = serialize_for_defaults(value)
+    except TypeError as error:
+        return False, str(error)
+    return run_defaults_write(domain, key, serialized_value)
 
 
 def delete_value(domain: str, key: str) -> Tuple[bool, str]:
