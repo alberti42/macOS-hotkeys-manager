@@ -15,6 +15,9 @@ CUSTOM_MENU_KEY = "com.apple.custommenu.apps"
 KEY_EQUIVALENTS = "NSUserKeyEquivalents"
 # System Settings calls this one "All Applications".
 GLOBAL_DOMAIN = "NSGlobalDomain"
+# A shortcut on a nested menu item stores its path with ESC before every component:
+# typing "Format->Font->Show Fonts" in System Settings is stored as
+# "\x1bFormat\x1bFont\x1bShow Fonts". The arrow never reaches the plist.
 MENU_PATH_SEPARATOR = "\x1b"
 TROUBLESHOOTING_URL = "https://github.com/alberti42/macOS-hotkeys-manager#-troubleshooting"
 
@@ -35,9 +38,7 @@ def display_control_chars(value: str) -> str:
     visible = []
     for char in value:
         codepoint = ord(char)
-        if char == MENU_PATH_SEPARATOR:
-            visible.append("\\u001b")
-        elif codepoint < 0x20 or 0x7F <= codepoint <= 0x9F:
+        if codepoint < 0x20 or 0x7F <= codepoint <= 0x9F:
             visible.append(f"\\u{codepoint:04x}")
         else:
             visible.append(char)
@@ -61,9 +62,10 @@ def read_domain(domain: str) -> Dict[str, Any]:
     """Read a whole preference domain as a dict. Returns {} if missing or unreadable.
 
     The export goes to a file, not to stdout: `defaults` writes XML to stdout but a binary
-    plist to a file. That matters because a shortcut bound to Escape holds a raw 0x1b, and
-    `defaults` emits control characters into its XML unescaped, which makes the XML
-    malformed and Python refuses to parse it. A binary plist has no such restriction.
+    plist to a file. That matters because any shortcut on a nested menu item stores ESC
+    separators (see MENU_PATH_SEPARATOR), and `defaults` emits control characters into its
+    XML unescaped. The result is malformed XML that Python refuses to parse. A binary plist
+    has no such restriction.
     """
     with tempfile.TemporaryDirectory() as tmpdir:
         path = os.path.join(tmpdir, "domain.plist")
@@ -88,8 +90,6 @@ def defaults_escape_string(value: str) -> str:
             escaped.append("\\\\")
         elif char == '"':
             escaped.append('\\"')
-        elif char == "\x1b":
-            escaped.append("\\033")
         elif codepoint < 0x20 or 0x7F <= codepoint <= 0x9F:
             escaped.append(f"\\U{codepoint:04x}")
         else:
@@ -101,10 +101,6 @@ def defaults_literal(value: Any) -> str:
     """Serialize a small plist value for `defaults write` old-style syntax."""
     if isinstance(value, str):
         return defaults_escape_string(value)
-    if isinstance(value, bool):
-        return "1" if value else "0"
-    if isinstance(value, (int, float)):
-        return str(value)
     if isinstance(value, dict):
         if not value:
             return "{ }"
