@@ -14,6 +14,7 @@ CUSTOM_MENU_KEY = "com.apple.custommenu.apps"
 KEY_EQUIVALENTS = "NSUserKeyEquivalents"
 # System Settings calls this one "All Applications".
 GLOBAL_DOMAIN = "NSGlobalDomain"
+MENU_PATH_SEPARATOR = "\x1b"
 TROUBLESHOOTING_URL = "https://github.com/alberti42/macOS-hotkeys-manager#-troubleshooting"
 
 # Exit codes
@@ -26,6 +27,33 @@ def warn(message: str = "") -> None:
     """Print to stderr, flushing stdout first so interleaved output stays in order."""
     sys.stdout.flush()
     print(message, file=sys.stderr, flush=True)
+
+
+def display_control_chars(value: str) -> str:
+    """Make control characters visible before writing values to a terminal."""
+    visible = []
+    for char in value:
+        codepoint = ord(char)
+        if char == MENU_PATH_SEPARATOR:
+            visible.append("\\u001b")
+        elif codepoint < 0x20 or 0x7F <= codepoint <= 0x9F:
+            visible.append(f"\\u{codepoint:04x}")
+        else:
+            visible.append(char)
+    return "".join(visible)
+
+
+def display_menu_name(menu_name: str) -> str:
+    """Split AppKit menu paths on their separator; delegate escaping to display_control_chars."""
+    if MENU_PATH_SEPARATOR not in menu_name:
+        return display_control_chars(menu_name)
+
+    parts = [
+        display_control_chars(part)
+        for part in menu_name.split(MENU_PATH_SEPARATOR)
+        if part
+    ]
+    return "->".join(parts)
 
 
 def read_domain(domain: str) -> Dict[str, Any]:
@@ -215,10 +243,17 @@ def import_shortcuts(filename: str, force: bool = False) -> int:
                     continue  # Already identical
                 elif force:
                     merged[menu_name] = new_key
-                    print(f"↪ Overwriting '{menu_name}' in {app}: '{old_key}' → '{new_key}'")
+                    print(
+                        f"↪ Overwriting '{display_menu_name(menu_name)}' in {app}: "
+                        f"'{display_control_chars(old_key)}' → '{display_control_chars(new_key)}'"
+                    )
                     updated = True
                 else:
-                    print(f"⚠️  Skipping '{menu_name}' in {app}: already assigned to '{old_key}', not overwritten.")
+                    print(
+                        f"⚠️  Skipping '{display_menu_name(menu_name)}' in {app}: "
+                        f"already assigned to '{display_control_chars(old_key)}', "
+                        f"import wants '{display_control_chars(new_key)}', not overwritten."
+                    )
             else:
                 merged[menu_name] = new_key
                 updated = True
