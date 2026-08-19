@@ -26,6 +26,7 @@ categories, `--export` will correctly produce an empty file.
 - ✅ Intelligent conflict detection (with `--force` overwrite option)
 - ✅ Full reset of all configured hotkeys (with user confirmation)
 - ✅ Automatically refreshes `cfprefsd` to apply changes immediately
+- ✅ Handles shortcuts on submenu items, whose menu paths contain control characters
 - ✅ Clean, type-annotated Python code
 
 ---
@@ -101,14 +102,39 @@ is missing from `com.apple.custommenu.apps`, which happens when a global shortcu
 directly with `defaults write -g NSUserKeyEquivalents …` rather than through System Settings.
 
 This tool:
-- Reads from those domains via `defaults export`, parsed as a real property list
+- Reads from those domains via `defaults export` into a binary property list, which
+  keeps values that XML cannot represent (see [Submenu shortcuts](#submenu-shortcuts))
 - Outputs valid JSON
 - Imports them back while preserving existing entries (unless `--force` is used)
 - Writes each value as an XML property list, so menu titles containing quotes,
   backslashes, or non-ASCII characters (`Vorwärts`, `Präsentation vorführen`) survive
-  the round trip intact
+  the round trip intact, falling back to the old-style plist format for menu paths,
+  which XML cannot carry
 - Verifies every write by reading it back, and exits non-zero if anything failed
 - Reloads the system preference daemon (`cfprefsd`) to apply changes immediately
+
+### Submenu shortcuts
+
+A shortcut on a top-level menu item needs only that item's title. To reach an item inside a
+**submenu**, type the whole path with `->` in System Settings → Keyboard → Keyboard
+Shortcuts → App Shortcuts, for example:
+
+```
+Format->Font->Show Fonts
+```
+
+macOS does not store that arrow. It stores an **ESC** character (`0x1b`) in front of every
+component, so the stored key becomes:
+
+```
+\x1bFormat\x1bFont\x1bShow Fonts
+```
+
+Two consequences:
+
+- Exported JSON contains `\u001b` escapes for such shortcuts. That is correct, and those
+  entries can be edited by hand.
+- Warnings print them back in the readable `Format->Font->Show Fonts` form.
 
 ---
 
